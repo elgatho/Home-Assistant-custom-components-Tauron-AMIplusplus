@@ -103,3 +103,51 @@ def test_hour_start_dst_day_has_25_distinct_hours():
     assert len(starts) == 25
     assert hourly_data.hour_start({"Date": None, "Hour": 1}) is None
     assert hourly_data.hour_start({"Date": "2026-10-25", "Hour": 99}) is None
+
+
+def _normalize(day, hours, ec="1.0"):
+    data = {"data": {"allData": [{"Date": day, "Hour": str(h), "EC": ec, "Status": "0", "Zone": "1"} for h in hours]}}
+    hourly_data.normalize_daily_data(data, date.fromisoformat(day))
+    return data["data"]["allData"]
+
+
+def test_normalize_autumn_duplicate_hour_3_is_renumbered():
+    rows = _normalize("2026-10-25", [1, 2, 3, 3] + list(range(4, 25)))
+    assert [r["Hour"] for r in rows] == list(range(1, 26))
+    starts = [hourly_data.hour_start(r) for r in rows]
+    assert starts == sorted(set(starts))
+
+
+def test_normalize_autumn_24_items_splits_merged_hour():
+    rows = _normalize("2026-10-25", range(1, 25), ec="2.0")
+    assert len(rows) == 25 and rows[2]["EC"] == rows[3]["EC"] == "1.000000"
+
+
+def test_normalize_spring_drops_nonexistent_hour():
+    assert len(_normalize("2026-03-29", range(1, 25))) == 23
+
+
+def test_normalize_regular_day_untouched():
+    assert [r["Hour"] for r in _normalize("2026-10-20", range(1, 25))] == list(range(1, 25))
+
+
+def _rows(day, count, base=0.0, step=1.0):
+    from datetime import datetime, timedelta, timezone
+    start = datetime.combine(day, datetime.min.time(), tzinfo=hourly_data.WARSAW).astimezone(timezone.utc)
+    return [(start + timedelta(hours=i), base + (i + 1) * step) for i in range(count)]
+
+
+def test_find_damaged_day_ok_and_dst_lengths():
+    rows = _rows(date(2026, 10, 24), 24) + _rows(date(2026, 10, 25), 25, base=24)
+    assert hourly_data.find_damaged_day(rows, date(2026, 10, 24), date(2026, 10, 25)) is None
+
+
+def test_find_damaged_day_missing_hour_on_dst_day():
+    rows = _rows(date(2026, 10, 24), 24) + _rows(date(2026, 10, 25), 24, base=24)
+    assert hourly_data.find_damaged_day(rows, date(2026, 10, 24), date(2026, 10, 25)) == date(2026, 10, 25)
+
+
+def test_find_damaged_day_decreasing_sum():
+    rows = _rows(date(2026, 10, 24), 24)
+    rows[10] = (rows[10][0], 1.0)
+    assert hourly_data.find_damaged_day(rows, date(2026, 10, 24), date(2026, 10, 24)) == date(2026, 10, 24)

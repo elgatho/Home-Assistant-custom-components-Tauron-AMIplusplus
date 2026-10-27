@@ -13,7 +13,7 @@ from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.storage import Store
 from homeassistant.util import slugify
 
-from .hourly_data import MEASUREMENT_TYPES, parse_daily_endpoint
+from .hourly_data import MEASUREMENT_TYPES, expected_hours_for_day, normalize_daily_data, parse_daily_endpoint
 from .const import (
     CONST_DATE_FORMAT,
     CONST_MAX_LOOKUP_RANGE,
@@ -506,6 +506,7 @@ class TauronAmiplusConnector:
             else:
                 for reading in values["data"]["allData"]:
                     reading.setdefault("Date", day.strftime("%Y-%m-%d"))
+            self.normalize_daily_data(values, day)
             if all(self.contains_data(a) for a in values["data"]["allData"]):
                 self._cache.add_value(day, generation, values)
             measurement_type = "oze" if generation else "consum"
@@ -646,6 +647,14 @@ class TauronAmiplusConnector:
             })
 
         data["data"]["allData"] = all_datas
+
+    @staticmethod
+    def get_expected_hours_for_day(day) -> int:
+        return expected_hours_for_day(day)
+
+    @staticmethod
+    def normalize_daily_data(data: dict, day) -> None:
+        normalize_daily_data(data, day)
 
     @staticmethod
     def contains_data(hourly_entry: dict[str, Any]) -> bool:

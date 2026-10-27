@@ -111,6 +111,67 @@ def hour_start(raw_hour: dict[str, Any]) -> datetime | None:
     return midnight + timedelta(hours=hour)
 
 
+def expected_hours_for_day(day: date | datetime) -> int:
+    """Real number of hours in a Warsaw day: 23 (spring DST), 24 or 25 (autumn DST)."""
+    if isinstance(day, datetime):
+        day = day.date()
+    start = datetime.combine(day, time(), tzinfo=WARSAW).astimezone(timezone.utc)
+    end = datetime.combine(day + timedelta(days=1), time(), tzinfo=WARSAW).astimezone(timezone.utc)
+    return int((end - start).total_seconds() // 3600)
+
+
+def normalize_daily_data(data: dict[str, Any], day: date | datetime) -> None:
+    """Make "Hour" a continuous 1..N sequence on DST days.
+
+    Tauron either repeats "Hour": 3 on the 25-hour day or returns 24 items (the merged 02:00-03:00 hours at
+    index 2) on 23/25-hour days. Colliding hours overwrite each other in the Recorder and make the cumulative
+    sum (and the energy storage) go negative.
+    """
+    all_data = data["data"].get("allData")
+    if not all_data:
+        return
+    expected = expected_hours_for_day(day)
+    if expected == 25 and len(all_data) == 24:
+        merged = all_data[2]
+        try:
+            half = f"{float(merged['EC']) / 2:.6f}"
+        except (KeyError, TypeError, ValueError):
+            half = merged.get("EC")
+        all_data = list(all_data[:2]) + [{**merged, "EC": half}, {**merged, "EC": half}] + list(all_data[3:])
+    elif expected == 23 and len(all_data) == 24:
+        all_data = list(all_data[:2]) + list(all_data[3:])
+    if len(all_data) == expected:
+        for index, item in enumerate(all_data, start=1):
+            item["Hour"] = index
+        data["data"]["allData"] = all_data
+
+
+def find_damaged_day(rows: Iterable[tuple[datetime, float | None]], first_day: date, last_day: date) -> date | None:
+    """First day in [first_day, last_day] whose stored hourly statistics are damaged.
+
+    `rows` are (UTC hour start, cumulative sum). A day is damaged when it has fewer hours than the day really has
+    (23/24/25) or when the cumulative sum drops (e.g. after two hours collided on a DST change).
+    """
+    counts: Counter[date] = Counter()
+    decreasing: set[date] = set()
+    previous = None
+    for start, total in sorted(rows, key=lambda row: row[0]):
+        day = start.astimezone(WARSAW).date()
+        if not first_day <= day <= last_day:
+            continue
+        counts[day] += 1
+        if total is not None:
+            if previous is not None and total < previous - 1e-4:
+                decreasing.add(day)
+            previous = total
+    day = first_day
+    while day <= last_day:
+        if day in decreasing or 0 < counts.get(day, 0) < expected_hours_for_day(day):
+            return day
+        day += timedelta(days=1)
+    return None
+
+
 def _response_data(endpoint: dict[str, Any]) -> dict[str, Any] | None:
     if isinstance(endpoint.get("data"), dict):
         return endpoint["data"]

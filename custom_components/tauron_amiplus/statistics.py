@@ -9,7 +9,7 @@ from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, UnitOfEnergy
 from homeassistant.core import HomeAssistant
 from homeassistant.util.dt import as_utc, get_time_zone, utc_from_timestamp
 
-from .hourly_data import hour_start
+from .hourly_data import find_damaged_day, hour_start
 from .history_import import build_metadata, statistic_id
 from .connector import TauronAmiplusConnector, TauronAmiplusRawData
 from .const import (CONF_METER_ID, CONF_METER_NAME, CONF_SHOW_BALANCED, CONF_SHOW_GENERATION, CONST_BALANCED,
@@ -17,6 +17,7 @@ from .const import (CONF_METER_ID, CONF_METER_NAME, CONF_SHOW_BALANCED, CONF_SHO
 
 _LOGGER = logging.getLogger(__name__)
 MAX_AUTOMATIC_STATISTICS_DAYS = 31
+SELF_HEALING_DAYS = 7
 RECORDER_SERIES = ("netto", "netto_oze")
 PREVIOUS_TARIFF_ZONE = "prev_tariff"
 HISTORY_MONTHS = 12
@@ -62,6 +63,16 @@ class TauronAmiplusStatisticsUpdater:
         now = datetime.datetime.now(datetime.timezone.utc)
         base_ids = await self.prepare_stats_ids({})
 
+        healing = False
+        if start_date is None:
+            damaged_day = await self.find_damaged_day()
+            if damaged_day is not None:
+                healing = True
+                warsaw = get_time_zone("Europe/Warsaw")
+                start_date = datetime.datetime.combine(damaged_day, datetime.time(), tzinfo=warsaw)
+                for offset in range((datetime.date.today() - damaged_day).days + 1):
+                    self.connector._cache.delete_day(damaged_day + datetime.timedelta(days=offset))
+
         if (start_date is not None
                 or not all(self.are_stats_up_to_date(v["last_stats_end"]) for v in base_ids.values())):
             if start_date is None:
@@ -99,7 +110,10 @@ class TauronAmiplusStatisticsUpdater:
             raw_data[f"{CONST_BALANCED}_{CONST_GENERATION}"] = balanced_generation
 
         for s, v in all_stat_ids.items():
-            if v["last_stats_end"] is not None:
+            if healing:
+                # Rewrite everything from the damaged day, continuing the sum from the hour before it.
+                v["sum"], v["last_stats_time"] = await self.get_sum_before(s, start_date)
+            elif v["last_stats_end"] is not None:
                 stat = await self.get_stats(raw_data[v["data_source"]], s)
                 if not stat.get(s):
                     # No stored statistics within the fetched range: continue from the last stored one.
@@ -118,6 +132,43 @@ class TauronAmiplusStatisticsUpdater:
         for s, v in all_stat_ids.items():
             await self.update_stats(s, v["name"], v["sum"], v["last_stats_time"], v["zone"], raw_data[v["data_source"]])
         return zones
+
+    async def find_damaged_day(self) -> datetime.date | None:
+        """Look at the last SELF_HEALING_DAYS full days in the Recorder for missing hours or a falling sum."""
+        stat_id = self.get_stats_id(CONST_CONSUMPTION)
+        warsaw = get_time_zone("Europe/Warsaw")
+        last_day = datetime.datetime.now(warsaw).date() - datetime.timedelta(days=1)
+        first_day = last_day - datetime.timedelta(days=SELF_HEALING_DAYS - 1)
+        start = datetime.datetime.combine(first_day, datetime.time(), tzinfo=warsaw) - datetime.timedelta(hours=1)
+        stats = await get_instance(self.hass).async_add_executor_job(
+            statistics_during_period, self.hass, start, None, {stat_id}, "hour", None, {"sum"})
+        rows = []
+        for row in stats.get(stat_id, []):
+            row_start = row.get("start")
+            if isinstance(row_start, (int, float)):
+                row_start = utc_from_timestamp(row_start)
+            if row_start is not None:
+                rows.append((row_start, row.get("sum")))
+        if not rows:
+            return None
+        day = find_damaged_day(rows, first_day, last_day)
+        if day is not None:
+            _LOGGER.info("[%s] Detected missing hours or a decreasing sum in the Recorder on %s, "
+                         "self-healing from this day", self.meter_id, day)
+        return day
+
+    async def get_sum_before(self, statistic_id, start):
+        """(sum, start) of the last stored hour before `start`; (0, None) when there is none."""
+        stats = await get_instance(self.hass).async_add_executor_job(
+            statistics_during_period, self.hass, start - datetime.timedelta(days=3), start, {statistic_id},
+            "hour", None, {"sum"})
+        rows = stats.get(statistic_id, [])
+        if not rows:
+            return 0, None
+        row_start = rows[-1].get("start")
+        if isinstance(row_start, (int, float)):
+            row_start = utc_from_timestamp(row_start)
+        return rows[-1].get("sum") or 0, row_start
 
     async def prepare_stats_ids(self, zones):
         suffixes = [{
