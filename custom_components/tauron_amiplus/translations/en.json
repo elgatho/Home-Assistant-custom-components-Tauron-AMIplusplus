@@ -37,13 +37,20 @@
       },
       "reauth_confirm": {
         "description": "Integration needs to re-authenticate your account in order to update credentials.",
-        "title": "Authentication expired for {name}"
+        "title": "Authentication expired for {name}",
+        "data": {
+          "username": "Username used to login at eLicznik",
+          "password": "Password used to login at eLicznik"
+        }
       }
     },
     "error": {
       "server_no_connection": "Cannot connect to TAURON eLicznik server: {error_info}",
       "invalid_meter_id": "Invalid energy meter ID",
       "missing_configurable_start_date": "Missing start date for configurable sensors"
+    },
+    "abort": {
+      "reauth_successful": "Re-authentication was successful"
     }
   },
   "options": {

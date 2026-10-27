@@ -1,4 +1,5 @@
 """Update coordinator for TAURON sensors."""
+import copy
 import datetime
 import logging
 import re
@@ -129,6 +130,7 @@ class TauronAmiplusConnector:
         self._show_configurable_date = show_configurable_date
         self._session: ClientSession | None = None
         self._cache = DailyDataCache(meter_id)
+        self._cycle_cache: dict[tuple, Any] = {}
         self.hourly_series = {measurement_type: [] for measurement_type in MEASUREMENT_TYPES}
         self.hourly_diagnostics = {}
         self._hass = hass
@@ -154,6 +156,7 @@ class TauronAmiplusConnector:
     async def get_light_data(self) -> TauronAmiplusRawData:
         """Only what the Recorder cannot provide: tariff and meter readings (daily/monthly/yearly values and
         hourly series are built from the Recorder, see TauronAmiplusStatisticsUpdater)."""
+        self._cycle_cache.clear()
         data = TauronAmiplusRawData()
         data.tariff = await self.login()
         data.consumption = TauronAmiplusDataSet()
@@ -562,6 +565,17 @@ class TauronAmiplusConnector:
         return await self.execute_post(CONST_URL_ENERGY_BUSINESS if self._is_business else CONST_URL_ENERGY, payload)
 
     async def execute_post(self, url: str, payload: dict):
+        # Identical requests within one refresh cycle (e.g. the same day needed by several sensors) hit the API once
+        cache_key = (url, tuple(sorted((k, str(v)) for k, v in payload.items())))
+        if cache_key in self._cycle_cache:
+            self.log(f"Cycle cache hit: {url} with payload: {payload}")
+            return copy.deepcopy(self._cycle_cache[cache_key])
+        result = await self._execute_post(url, payload)
+        if result is not None:
+            self._cycle_cache[cache_key] = copy.deepcopy(result)
+        return result
+
+    async def _execute_post(self, url: str, payload: dict):
         self.log(f"EXECUTING: {url} with payload: {payload}")
         if self._session is None or self._session.closed:
             self.log("HTTP session is closed; re-authenticating")
@@ -632,10 +646,11 @@ class TauronAmiplusConnector:
     @staticmethod
     def add_all_data(data: dict, date):
         all_datas = []
-        zone = list(data['data']['zonesName'].keys())[0]
+        zones_name = data['data'].get('zonesName') or {}
+        zone = next(iter(zones_name), "1")
         for i, v in enumerate(data["data"]["values"]):
-            if len(data['data']['zonesName']) > 0:
-                selected_zones = list(filter(lambda item: item[1][i], data["data"]["chartZones"].items()))
+            if zones_name and data['data'].get('chartZones'):
+                selected_zones = [item for item in data["data"]["chartZones"].items() if i < len(item[1]) and item[1][i]]
                 if len(selected_zones) > 0:
                     zone = selected_zones[0][0]
             all_datas.append({

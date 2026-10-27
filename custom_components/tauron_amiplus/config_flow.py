@@ -42,6 +42,7 @@ class TauronAmiplusFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self._meters = []
         self._tariff = None
         self._meter_id = None
+        self._reauth_entry = None
 
     async def async_step_import(self, import_config):
         return self.async_abort(reason="single_instance_allowed")
@@ -294,14 +295,38 @@ class TauronAmiplusFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_reauth(self, entry_data):
         """Perform reauth upon an authentication error or missing cloud credentials."""
+        self._reauth_entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
         return await self.async_step_reauth_confirm()
 
-    async def async_step_reauth_confirm(self, user_input = None):
-        """Dialog that informs the user that reauth is required."""
+    async def async_step_reauth_confirm(self, user_input=None):
+        """Ask for new credentials, check them and update the existing entry."""
+        entry = self._reauth_entry
+        errors = {}
         if user_input is not None:
-            return await self.async_step_init()
-        return self.async_show_form(step_id="reauth_confirm")
-
+            try:
+                await TauronAmiplusConnector.calculate_tariff(
+                    user_input[CONF_USERNAME], user_input[CONF_PASSWORD], entry.data[CONF_METER_ID], self.hass
+                )
+            except Exception as e:
+                _LOGGER.error(str(e))
+                errors = {CONF_PASSWORD: "server_no_connection"}
+            else:
+                return self.async_update_reload_and_abort(
+                    entry,
+                    data_updates={
+                        CONF_USERNAME: user_input[CONF_USERNAME],
+                        CONF_PASSWORD: user_input[CONF_PASSWORD],
+                    },
+                )
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=vol.Schema({
+                vol.Required(CONF_USERNAME, default=entry.data.get(CONF_USERNAME, "")): str,
+                vol.Required(CONF_PASSWORD): str,
+            }),
+            description_placeholders={"name": entry.title},
+            errors=errors,
+        )
 
     @staticmethod
     @callback

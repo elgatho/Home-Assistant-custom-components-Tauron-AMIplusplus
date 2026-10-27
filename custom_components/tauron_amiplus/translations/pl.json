@@ -37,13 +37,20 @@
       },
       "reauth_confirm": {
         "description": "Integracja musi zaktualizować dane logowania.",
-        "title": "Błąd logowania {name}"
+        "title": "Błąd logowania {name}",
+        "data": {
+          "username": "Nazwa użytkownika używana do logowania w eLiczniku",
+          "password": "Hasło używane do logowania w eLiczniku"
+        }
       }
     },
     "error": {
       "server_no_connection": "Nie można połączyć się z serwerem TAURON eLicznik: {error_info}",
       "invalid_meter_id": "Nieprawidłowe ID punktu poboru",
       "missing_configurable_start_date": "Nie skonfigurowano początku okresu dla sensorów konfigurowalnych"
+    },
+    "abort": {
+      "reauth_successful": "Ponowne uwierzytelnienie zakończone powodzeniem"
     }
   },
   "options": {
