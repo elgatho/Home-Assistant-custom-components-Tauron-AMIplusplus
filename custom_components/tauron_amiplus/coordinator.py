@@ -8,7 +8,8 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .connector import TauronAmiplusConnector, TauronAmiplusRawData
-from .const import (DEFAULT_UPDATE_INTERVAL, DOMAIN)
+from .const import DOMAIN
+from .schedule import next_update
 from .statistics import TauronAmiplusStatisticsUpdater
 
 _LOGGER = logging.getLogger(__name__)
@@ -34,7 +35,7 @@ class TauronAmiplusUpdateCoordinator(DataUpdateCoordinator[TauronAmiplusRawData]
             settlement_factor: float = 0.8,
             energy_storage_reset_date: datetime.date | None = None,
     ):
-        super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=DEFAULT_UPDATE_INTERVAL,
+        super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=None,
                          update_method=self.update_method)
         self.connector = TauronAmiplusConnector(username, password, meter_id, hass, config_entry_id, show_generation, show_12_months,
                                                 show_balanced, show_balanced_year, show_configurable,
@@ -60,6 +61,12 @@ class TauronAmiplusUpdateCoordinator(DataUpdateCoordinator[TauronAmiplusRawData]
     async def update_method(self) -> TauronAmiplusRawData:
         """Only tariff and meter readings come from the API on every refresh; everything else is read from the Recorder."""
         self.log("Starting data update")
+        try:
+            return await self._update()
+        finally:
+            await self._schedule_next_update()
+
+    async def _update(self) -> TauronAmiplusRawData:
         data = await self.connector.get_light_data()
         self._sync_device_tariff(data)
         if not self._zones_name:
@@ -71,6 +78,19 @@ class TauronAmiplusUpdateCoordinator(DataUpdateCoordinator[TauronAmiplusRawData]
         await self.generate_statistics()
         await self._fill_from_recorder(data)
         return data
+
+    async def _schedule_next_update(self) -> None:
+        """Poll at 06:30 and 14:30; 22:30 only when yesterday is still incomplete in the Recorder."""
+        try:
+            complete = await self._statistics.is_yesterday_complete()
+        except Exception:
+            _LOGGER.exception("[%s]: Failed to check completeness of yesterday", self.meter_id)
+            complete = False
+        now = datetime.datetime.now(datetime.timezone.utc)
+        target = next_update(now, complete)
+        self.update_interval = target - now
+        _LOGGER.info("[%s]: Next scheduled update at %s (yesterday %s)", self.meter_id,
+                     target.strftime("%Y-%m-%d %H:%M"), "complete" if complete else "incomplete")
 
     def _sync_device_tariff(self, data) -> None:
         """Keep the device's displayed tariff in line with the tariff detected in the latest data."""

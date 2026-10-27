@@ -9,7 +9,7 @@ from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, UnitOfEnergy
 from homeassistant.core import HomeAssistant
 from homeassistant.util.dt import as_utc, get_time_zone, utc_from_timestamp
 
-from .hourly_data import find_damaged_day, hour_start
+from .hourly_data import expected_hours_for_day, find_damaged_day, hour_start
 from .history_import import build_metadata, statistic_id
 from .connector import TauronAmiplusConnector, TauronAmiplusRawData
 from .const import (CONF_METER_ID, CONF_METER_NAME, CONF_SHOW_BALANCED, CONF_SHOW_GENERATION, CONST_BALANCED,
@@ -156,6 +156,17 @@ class TauronAmiplusStatisticsUpdater:
             _LOGGER.info("[%s] Detected missing hours or a decreasing sum in the Recorder on %s, "
                          "self-healing from this day", self.meter_id, day)
         return day
+
+    async def is_yesterday_complete(self) -> bool:
+        """True when the Recorder holds every hour of yesterday (23/24/25 depending on DST)."""
+        stat_id = self.get_stats_id(CONST_CONSUMPTION)
+        warsaw = get_time_zone("Europe/Warsaw")
+        yesterday = datetime.datetime.now(warsaw).date() - datetime.timedelta(days=1)
+        start = datetime.datetime.combine(yesterday, datetime.time(), tzinfo=warsaw)
+        end = datetime.datetime.combine(yesterday + datetime.timedelta(days=1), datetime.time(), tzinfo=warsaw)
+        stats = await get_instance(self.hass).async_add_executor_job(
+            statistics_during_period, self.hass, start, end, {stat_id}, "hour", None, {"sum"})
+        return len(stats.get(stat_id, [])) >= expected_hours_for_day(yesterday)
 
     async def get_sum_before(self, statistic_id, start):
         """(sum, start) of the last stored hour before `start`; (0, None) when there is none."""
