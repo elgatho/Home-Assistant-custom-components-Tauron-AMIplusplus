@@ -1,6 +1,13 @@
-*.pyc
-/scripts
 __pycache__/
 *.py[cod]
-*$py.class
+.pytest_cache/
+*.bak
+*.backup*
+.venv/
+venv/
+.idea/
+.vscode/
+.DS_Store
+/scripts
 /tests
+pytest.ini
