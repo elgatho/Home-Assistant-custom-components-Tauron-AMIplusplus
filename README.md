@@ -18,175 +18,11 @@
 
 # Tauron Amiplus+
 
-[English version](README.md)
+[English version](README.en.md)
 
 Integracja pobiera dane o zużyciu i produkcji energii z nieoficjalnego API [TAURON eLicznik](https://elicznik.tauron-dystrybucja.pl).
 
-## Fork i podziękowania
-
-To społecznościowy fork oryginalnego projektu [Piotra Machowskiego](https://github.com/PiotrMachowski).
-
-Podziękowania dla autora oryginału za stworzenie i utrzymywanie integracji, rozpracowanie API eLicznika oraz pierwszą implementację dla Home Assistanta. Fork powstał, ponieważ oryginalny projekt przestał otrzymywać aktualizacje wymagane przez obecne wersje Home Assistanta i zmiany w serwisie TAURON.
-
-Fork zachowuje informacje o autorstwie i licencję oryginału. Nie jest powiązany z TAURON ani przez niego rekomendowany.
-
-## Jak to działa
-
-Integracja loguje się do eLicznika i okresowo odczytuje bieżące dane licznika. W zależności od wybranych opcji pobiera też dane dzienne, miesięczne, roczne i godzinowe.
-
-Statystyki są obsługiwane osobno niż sensory bieżących wartości:
-
-- Rejestrator (Recorder) Home Assistanta jest głównym źródłem już zapisanych statystyk długoterminowych.
-- Integracja odpytuje API TAURON tylko o brakujący lub najnowszy zakres potrzebny do uzupełnienia statystyk.
-- Wartości dzienne, miesięczne i roczne (z podziałem na strefy) są liczone ze statystyk Recordera. Przy każdym odświeżeniu API TAURON jest pytane wyłącznie o taryfę, odczyty licznika (stan licznika, którego nie da się wyliczyć z historii) oraz godziny, których nie ma jeszcze w Recorderze.
-- Statystyki w Recorderze są dostępne ze źródłem `tauron_importer` i można ich używać w panelu Energia Home Assistanta.
-- Przy pierwszym uruchomieniu (brak statystyk dla licznika) integracja pobiera historię automatycznie: **12 miesięcy, od 1. dnia miesiąca sprzed 12 miesięcy do dziś** (np. 22.10.2026 od 01.10.2025). Wymaga to jednego zapytania na dzień i serię, więc trwa kilka minut; odbywa się w tle i nie blokuje sensorów. Przerwane pobieranie jest kontynuowane od ostatniego zapisanego punktu.
-- Oprócz statystyk `tauron_importer` integracja utrzymuje w Recorderze dwie surowe serie godzinowe (`tauron_amiplus:<licznik>_netto`, `_netto_oze`). Są źródłem danych dla magazynu energii i sensorów z ostatnich 12 miesięcy. Wypełnia je ten sam automatyczny mechanizm; dawny import z pliku `tauron_raw_data.json` i usługa `tauron_amiplus.import_history` zostały usunięte.
-- Recorder jest jedynym magazynem danych historycznych. Integracja nie przechowuje własnej historii (żadnych plików ani kopii odczytów czy wyniku magazynu energii w `.storage`); pyta API TAURON tylko o godziny, których nie ma jeszcze w Recorderze, a magazyn energii i sensory 12-miesięczne są przeliczane ze statystyk Recordera.
-- Aby pobrać dłuższy okres lub uzupełnić lukę, użyj usługi `tauron_amiplus.download_statistics` z datą początkową.
-
-## Wykrywanie taryfy i taryfy wielostrefowe (G11, G12, G12W)
-
-Taryfa jest odczytywana z eLicznika przy każdym odświeżeniu, więc zmiana (np. G11 -> G12W) nie wymaga żadnej konfiguracji.
-
-- Wykryta taryfa jest widoczna jako wersja oprogramowania urządzenia (`Tariff G12W`), w atrybutach sensora magazynu energii oraz w logu (`Tariff changed from ... to ...`).
-- Dane godzinowe zachowują strefę każdej godziny. Jeśli taryfa zmienia się w pobieranym zakresie, strefy poprzedniej taryfy są przechowywane osobno (np. `G11_1` = `Cała doba (T1) [G11]`), dzięki czemu całodobowa strefa G11 nigdy nie miesza się ze strefą szczytową G12W.
-- Miesięczne i roczne sumy stref są przeliczane z wierszy dziennych zwracanych przez eLicznik z tego samego powodu (samo API sumuje numery stref między taryfami).
-- Statystyki godzinowe mają warianty per strefa (`..._consumption_zone_1`, `..._consumption_zone_2`) dla taryf wielostrefowych. Godziny zapisane w innej taryfie liczą się w nich jako `0`; statystyka całkowita zawsze zawiera wszystko.
-- Magazyn energii nie zależy od taryfy: zawsze sumuje całą energię.
-
-### Sensory stref (tylko taryfy wielostrefowe)
-
-Tworzone automatycznie, gdy wykryta taryfa ma więcej niż jedną strefę; dla G11 nie są tworzone:
-
-| Sensor | Opis |
-|---|---|
-| `monthly energy consumption zone <n>` | Zużycie w bieżącym miesiącu w strefie `<n>` bieżącej taryfy (kWh). Nazwa strefy jest w atrybucie `zone`. Liczone są tylko dni bieżącej taryfy. |
-| `monthly off-peak consumption share` | Udział (%) zużycia w tańszej strefie w zużyciu bieżącej taryfy (strefa o najwyższym numerze, np. `T2` w G12W). Atrybuty: `cheaper_zone`, `total_in_tariff`. |
-
-Sensory te zerują się co miesiąc i służą do kart oraz automatyzacji. W panelu Energia używaj godzinowych statystyk `tauron_importer` (dodaj albo statystykę całkowitą `..._consumption`, albo statystyki stref, ale nie obie naraz).
-
-## Konfiguracja
-
-Integrację można skonfigurować przez interfejs Home Assistanta lub, w starszych instalacjach, przez YAML. Zalecany jest interfejs (config flow).
-
-### Config flow (zalecane)
-
-Przejdź do: _Ustawienia_ -> _Urządzenia i usługi_ -> _Dodaj integrację_ -> _Tauron Amiplus+_.
-
-Konfiguracja obejmuje:
-
-1. Nazwę użytkownika i hasło do TAURON eLicznik.
-2. Wybór licznika spośród liczników dostępnych na koncie.
-3. Opcjonalne ustawienia sensorów i statystyk.
-
-Główne opcje:
-
-| Opcja | Opis |
-|---|---|
-| Generation sensors | Dodaje sensory energii wyprodukowanej przez instalację. |
-| Last 12 months sensors | Dodaje sensory zużycia, produkcji i bilansu z ostatnich 12 miesięcy. |
-| Balanced sensors | Dodaje sensory bilansu porównujące zużycie z produkcją. |
-| Balanced yearly sensors | Dodaje dane bilansu rocznego. |
-| Configurable sensors | Dodaje sensor liczony od wybranej daty historycznej. Opcja może wymagać więcej zapytań do API. |
-| Store statistics | Zapisuje dane godzinowe w statystykach Recordera Home Assistanta pod źródłem `tauron_importer`. Statystyki są obecnie zawsze włączone, bo sensory są z nich budowane. |
-| Settlement factor | Współczynnik używany przez wirtualny magazyn energii i obliczenia bilansu. Wartość od `0` do `1`; domyślnie `0.8`. |
-| Energy storage reset date | Opcjonalna data, od której zaczyna się obliczanie wirtualnego magazynu energii. |
-
-Możesz też użyć linku [My Home Assistant](http://my.home-assistant.io/):
-
-[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=tauron_amiplus)
-
-### Ręcznie - yaml
-
-<details>
-<summary>Uwaga: konfiguracja przez yaml nie jest już zalecana</summary>
-
-**Uwaga:** Nie wszystkie funkcje są dostępne przy konfiguracji przez yaml
-
-| Klucz                 | Typ      | Wymagany | Domyślnie        | Opis                                                                           |
-|-----------------------|----------|----------|------------------|--------------------------------------------------------------------------------|
-| `name`                | `string` | `False`  | `Tauron Amiplus+` | Nazwa sensora                                                                 |
-| `username`            | `string` | `True`   | -                | Login do [*eLicznika*](https://elicznik.tauron-dystrybucja.pl)                 |
-| `password`            | `string` | `True`   | -                | Hasło do [*eLicznika*](https://elicznik.tauron-dystrybucja.pl)                 |
-| `energy_meter_id`     | `string` | `True`   | -                | ID licznika energii                                                            |
-| `monitored_variables` | `list`   | `True`   | -                | Lista monitorowanych zmiennych                                                 |
-
-#### Dostępne monitorowane zmienne
-
-| Klucz                        | Opis                                                          |
-|------------------------------|---------------------------------------------------------------|
-| `consumption_reading`        | Aktualny odczyt licznika (pobór)                              |
-| `consumption_daily`          | Dzienne zużycie energii **(za poprzedni dzień!)**             |
-| `consumption_monthly`        | Miesięczne zużycie energii                                    |
-| `consumption_yearly`         | Roczne zużycie energii                                        |
-| `consumption_last_12_months` | Łączne zużycie energii z ostatnich 12 miesięcy                |
-| `generation_reading`         | Aktualny odczyt licznika (produkcja)                          |
-| `generation_daily`           | Dzienna produkcja energii **(za poprzedni dzień!)**           |
-| `generation_monthly`         | Miesięczna produkcja energii                                  |
-| `generation_yearly`          | Roczna produkcja energii                                      |
-| `generation_last_12_months`  | Łączna produkcja energii z ostatnich 12 miesięcy              |
-| `balanced_daily`             | Bilans dzienny **(za poprzedni dzień!)**                      |
-| `balanced_monthly`           | Bilans miesięczny                                             |
-| `balanced_yearly`            | Bilans roczny                                                 |
-| `balanced_last_12_months`    | Bilans z ostatnich 12 miesięcy                                |
-| `balanced_configurable`      | Bilans od skonfigurowanej daty historycznej                   |
-| `energy_storage`             | Wirtualny domowy magazyn energii liczony ze zużycia i produkcji |
-| `amount`                     | Aktualna kwota/informacje o płatności, jeśli dostępne         |
-
-#### Przykład
-
-```
-sensor:
-  - platform: tauron_amiplus
-    name: Tauron Amiplus+
-    username: !secret tauron_amiplus.username
-    password: !secret tauron_amiplus.password
-    energy_meter_id: !secret tauron_amiplus.energy_meter_id
-    monitored_variables:
-      - consumption_reading
-      - consumption_daily
-      - consumption_monthly
-      - consumption_yearly
-      - consumption_last_12_months
-      - generation_reading
-      - generation_daily
-      - generation_monthly
-      - generation_yearly
-      - generation_last_12_months
-      - balanced_daily
-      - balanced_monthly
-      - balanced_yearly
-      - balanced_last_12_months
-```
-
-</details>
-
-## Sensory
-
-Wszystkie sensory energii używają jednostki `kWh`, a ich nazwy zawierają skonfigurowaną nazwę licznika. Dokładne identyfikatory encji zależą od ID licznika i wybranych opcji.
-
-### Zużycie i produkcja
-
-- **Aktualny odczyt**: ostatni skumulowany odczyt licznika zwrócony przez TAURON.
-- **Energia dzienna**: energia za poprzedni zakończony dzień. Dane za poprzedni dzień są zamierzone, bo bieżący dzień może być niepełny.
-- **Energia miesięczna**: energia zgromadzona w bieżącym miesiącu kalendarzowym.
-- **Energia roczna**: energia zgromadzona w bieżącym roku kalendarzowym.
-- **Energia z ostatnich 12 miesięcy**: kroczące sumowanie poprzednich 12 miesięcy.
-
-Te same grupy są dostępne dla zużycia oraz, po włączeniu produkcji, dla wytwarzania energii.
-
-### Sensory bilansu
-
-Sensory bilansu porównują zużycie i produkcję w wybranym okresie. Wartości dodatnie i ujemne wskazują kierunek bilansu zgodnie z danymi zwróconymi przez TAURON. W zależności od włączonych opcji dostępne są warianty dzienne, miesięczne, roczne, kroczące 12-miesięczne i z konfigurowalnym okresem.
-
-### Wirtualny magazyn energii
-
-Sensor wirtualnego magazynu energii szacuje dostępną zmagazynowaną energię na podstawie kredytów z produkcji i zużycia. Korzysta ze statystyk Recordera, zamiast pobierać całą historię przy każdej aktualizacji. Na wynik wpływają współczynnik rozliczenia i data resetu.
-
-### Statystyki w Recorderze
-
-Statystyki godzinowe (zawsze włączone; opcja **Store statistics** już ich nie wyłącza, ponieważ sensory są z nich budowane) są zapisywane ze źródłem `tauron_importer`. Integracja sprawdza ostatni zapisany punkt w Recorderze i pobiera z TAURON tylko ostatni lub brakujący zakres. W panelu Energia Home Assistanta do wykresów godzinowych używaj statystyk `tauron_importer`, a nie sensorów.
+Społecznościowy fork projektu [Piotra Machowskiego](https://github.com/PiotrMachowski) – dziękuję za oryginał i rozpracowanie API eLicznika. Fork zachowuje autorstwo i licencję oryginału, nie jest powiązany z TAURON.
 
 ## Instalacja
 
@@ -211,46 +47,60 @@ rm tauron_amiplus.zip
 
 Następnie zrestartuj Home Assistanta przed zastosowaniem zmian w pliku konfiguracyjnym.
 
+## Konfiguracja
+
+_Ustawienia_ -> _Urządzenia i usługi_ -> _Dodaj integrację_ -> _Tauron Amiplus+_ (lub [My Home Assistant](https://my.home-assistant.io/redirect/config_flow_start/?domain=tauron_amiplus)). Podaj login i hasło do eLicznika, wybierz licznik i opcje:
+
+| Opcja | Opis |
+|---|---|
+| Generation sensors | Sensory energii wyprodukowanej (prosumenci). |
+| Last 12 months sensors | Sumy z ostatnich 12 miesięcy. |
+| Balanced sensors / yearly | Sensory bilansu (zużycie minus produkcja). |
+| Configurable sensors | Sumy od wybranej daty historycznej (więcej zapytań do API). |
+| Settlement factor | Współczynnik rozliczenia magazynu (`0`–`1`, domyślnie `0.8`). |
+| Energy storage reset date | Data startu magazynu (saldo od 0 kWh). Puste = ostatnie 12 miesięcy. |
+
+Statystyki godzinowe są zawsze włączone (opcja _Store statistics_ jest pozostawiona dla zgodności). Konfiguracja przez YAML jest przestarzała – użyj interfejsu.
+
+## Jak to działa
+
+- **Harmonogram.** Odświeżenie o **06:30** i **14:30** (po nocnym przeliczeniu danych przez Tauron). Okno **22:30** działa tylko wtedy, gdy wczorajsza doba jest jeszcze niepełna w Recorderze. Kolejny termin jest w logu (`Next scheduled update at ...`). Odświeżenie następuje też po restarcie HA, przeładowaniu integracji i zmianie konfiguracji.
+- **Recorder jako magazyn danych.** Wartości dzienne, miesięczne i roczne (także per strefa) są liczone ze statystyk godzinowych `tauron_importer`. Z API pobierane są tylko taryfa, odczyty licznika i brakujące godziny. Dwie dodatkowe serie `tauron_amiplus:<licznik>_netto` i `_netto_oze` zasilają magazyn energii i sensory 12-miesięczne.
+- **Pierwsze uruchomienie.** Historia 12 miesięcy pobierana jest w tle (kilka minut, jedno zapytanie na dzień i serię) i wznawiana po przerwie.
+- **Zmiana czasu.** Doby 23- i 25-godzinne są normalizowane do ciągłych godzin, żeby nie nadpisywały się w Recorderze.
+- **Samonaprawa.** Przy każdym odświeżeniu sprawdzane jest 7 ostatnich pełnych dni: brakujące godziny lub malejąca suma powodują ponowne pobranie i przeliczenie od uszkodzonego dnia. Ręczna naprawa zwykle nie jest potrzebna.
+- **Mniej zapytań.** Identyczne zapytania w jednym cyklu trafiają do API raz.
+- **Ponowne logowanie.** Przy błędnym haśle HA zgłasza reauth; nowe dane aktualizują istniejący wpis.
+- **Taryfa** (G11, G12, G12W) jest wykrywana automatycznie przy każdym odświeżeniu i widoczna w wersji urządzenia (`Tariff G12W`). Przy zmianie taryfy strefy poprzedniej taryfy są liczone osobno.
+
+## Sensory
+
+Energia w `kWh`; nazwa zawiera nazwę licznika. Sensory produkcji, bilansu, 12-miesięczne i konfigurowalne pojawiają się po włączeniu odpowiednich opcji.
+
+| Sensor | Co pokazuje |
+|---|---|
+| `Current consumption reading` | Bieżący stan licznika (energia pobrana, licznik rosnący). |
+| `Current generation reading` | Bieżący stan licznika (energia oddana). |
+| `Daily energy consumption` / `generation` | Energia za **ostatni zakończony dzień** (bieżący jest niepełny). |
+| `Monthly energy consumption` / `generation` | Suma od początku bieżącego miesiąca. |
+| `Yearly energy consumption` / `generation` | Suma od początku bieżącego roku. |
+| `Last 12 months energy consumption` / `generation` | Suma z kroczącego okna 12 miesięcy. |
+| `Configurable energy consumption` / `generation` | Suma od wybranej daty historycznej. |
+| `Daily` / `Monthly` / `Yearly` / `Last 12 months` / `Configurable balance` | Bilans = zużycie − produkcja w danym okresie. Wartość ujemna oznacza nadwyżkę produkcji. |
+| `Domowy magazyn energii` | Szacowana energia dostępna w wirtualnym magazynie (net-metering): nadwyżki miesięczne × współczynnik rozliczenia, zużywane od najstarszych (FIFO), w oknie 12 miesięcy lub od daty resetu. Atrybuty: `uncovered_consumption`, `window`, `tariff`. |
+| `Monthly energy consumption zone <n>` | Zużycie w miesiącu w strefie `<n>` (tylko taryfy wielostrefowe; nazwa strefy w atrybucie `zone`). |
+| `Monthly off-peak consumption share` | Udział (%) zużycia w tańszej strefie w bieżącej taryfie (tylko wielostrefowe). |
+
+### Panel Energia
+
+Używaj godzinowych statystyk `tauron_importer`, nie sensorów. Przy taryfie wielostrefowej dodaj albo `..._consumption`, albo statystyki `..._consumption_zone_1` i `_zone_2` – nie obie naraz (podwójne liczenie).
+
+## Usługi
+
+- `tauron_amiplus.download_statistics` – pobiera statystyki od podanej daty (uzupełnienie luk).
+- `tauron_amiplus.clear_cache` – czyści pamięć podręczną pobranych dni.
+
 ## FAQ
 
-* **Jak wyświetlić dane godzinowe w panelu Energia?**
-
-  Aby pokazać dane godzinowe w panelu Energia, użyj statystyk `tauron_importer` zamiast encji.
-  Przy taryfie wielostrefowej (G12, G12W) dodaj albo statystykę całkowitą `..._consumption`, albo osobno `..._consumption_zone_1` i `..._consumption_zone_2` (np. z różnymi cenami). Nie dodawaj obu naraz, bo energia zostanie policzona dwukrotnie.
-
-* **Dlaczego w statystykach/panelu Energia brakuje dni?**
-
-  Luki pojawiają się, gdy w odczytach godzinowych z danego dnia brakuje wartości. Integracja nie zmyśla brakujących pomiarów; czeka, aż wartości pojawią się w eLicznik, a potem uzupełnia brakujący zakres.
-  Możesz to sprawdzić na [stronie eLicznika](https://elicznik.tauron-dystrybucja.pl).
-
-* **Jak naprawić brakujące dane w statystykach/panelu Energia?**
-
-  Gdy dane pojawią się na [stronie eLicznika](https://elicznik.tauron-dystrybucja.pl), możesz uzupełnić luki usługą `tauron_amiplus.download_statistics`.
-
-* **Kiedy integracja aktualizuje dane?**
-
-  Integracja loguje się i pobiera dane z eLicznika co 8,5 h.
-  Licznik jest restartowany po: restarcie HA, przeładowaniu integracji i zmianie konfiguracji.
-  Dodatkowo nowa paczka danych jest pobierana, gdy użytkownik pobiera dane diagnostyczne.
-
-* **Jak obliczyć dostępną energię jako prosument?**
-
-  Do obliczenia dostępnej energii możesz użyć następującej konfiguracji:
-  ```yaml
-  input_number:
-    initial_energy_bank:
-      min: 0
-      max: 100000000
-      step: 1
-      mode: box
-  template:
-    - sensor:
-        - name: Tauron energy bank
-          state_class: total
-          device_class: energy
-          unique_id: tauron_energy_bank
-          icon: mdi:home-battery-outline
-          state: "{{ (states('input_number.initial_energy_bank') | float(0) + states('sensor.tauron_amiplus_123_yearly_energy_generation') | float(0) * 0.8 - states('sensor.tauron_amiplus_123_yearly_energy_consumption') | float(0)) | round(3) }}"
-          unit_of_measurement: "kWh"
-          availability: "{{ states('sensor.tauron_amiplus_123_yearly_energy_generation') | is_number and states('sensor.tauron_amiplus_123_yearly_energy_consumption') | is_number }}"
-  ```
+* **W statystykach brakuje dni.** Tauron nie opublikował jeszcze godzin z tego dnia. Integracja ich nie zmyśla i uzupełni je sama; po pojawieniu się danych w [eLiczniku](https://elicznik.tauron-dystrybucja.pl) możesz też użyć `download_statistics`.
+* **Magazyn energii ma dziwną wartość po zmianie czasu.** Samonaprawa poprawi dane przy najbliższym odświeżeniu (06:30, 14:30 lub 22:30). Jeśli nie, uruchom `download_statistics` od dnia zmiany czasu.
