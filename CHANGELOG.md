@@ -46,10 +46,16 @@
   trafia do logu INFO. Interwał przestał dryfować, a zapytania nocne nie obciążają konta.
 
 ### Dokumentacja
+- Instalacja: Marketplace (HA 2026.11+, zastępuje HACS), HACS (starszy HA) jako własne repozytorium i ręcznie. Plakietka „HACS Default” zastąpiona, bo fork nie jest w katalogu domyślnym.
+- `hacs.json`: minimalna wersja HA podniesiona z 2022.12.0 do 2025.4.0 (`StatisticMeanType`, `type` z Pythona 3.12, `runtime_data`).
+- `manifest.json`: `codeowners` rozdzielone na poprawne loginy (`@PiotrMachowski`, `@elgatho`); wcześniej jeden wpis ze spacją nie przechodził walidacji.
 - README (PL/EN) skrócone i uporządkowane; usunięto przykład „Jak obliczyć dostępną energię jako prosument"; dodano tabelę sensorów z opisem działania oraz opis harmonogramu, samonaprawy i usług; poprawiono link między wersjami językowymi.
 
 ### Testy
 - `tests/test_outage.py`: parsowanie wyłączeń (sortowanie, filtr ulicy) i powiadomienia.
+- `tests/test_outage_config_flow.py`: kreator adresu (menu, wyszukiwanie miejscowości i ulicy, błędy, duplikat adresu) i opcje wpisu.
+- `tests/test_outage_coordinator.py`: bieżące i następne wyłączenie, wykrywanie nowych, powiadomienia, błędy API, `async_fetch_range`.
+- `tests/test_outage_setup.py`: setup wpisu (encje, jedno urządzenie, `SETUP_RETRY`, unload), usługi odrzucające wpis adresu, diagnostyka.
 - Nowe: `tests/test_hourly_data.py` (normalizacja DST, wykrywanie uszkodzonego dnia),
   `tests/test_self_healing.py` (Recorder w pamięci), `tests/test_connector_cycle.py` (deduplikacja, strefy),
   `tests/test_schedule.py` (harmonogram, także przy zmianie czasu).

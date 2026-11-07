@@ -1,11 +1,11 @@
-[![HACS Default][hacs_shield]][hacs]
+[![Marketplace / HACS][hacs_shield]][hacs]
 [![GitHub Latest Release][releases_shield]][latest_release]
 [![GitHub All Releases][downloads_total_shield]][releases]
 [![Installations][installations_shield]][releases]
 
 
-[hacs_shield]: https://img.shields.io/static/v1.svg?label=HACS&message=Default&style=popout&color=green&labelColor=41bdf5&logo=HomeAssistantCommunityStore&logoColor=white
-[hacs]: https://hacs.xyz/docs/default_repositories
+[hacs_shield]: https://img.shields.io/static/v1.svg?label=HACS&message=Custom%20repository&style=popout&color=orange&labelColor=41bdf5&logo=HomeAssistantCommunityStore&logoColor=white
+[hacs]: https://hacs.xyz/
 
 [latest_release]: https://github.com/elgatho/Home-Assistant-custom-components-Tauron-AMIplusplus/releases/latest
 [releases_shield]: https://img.shields.io/github/release/elgatho/Home-Assistant-custom-components-Tauron-AMIplusplus.svg?style=popout
@@ -28,13 +28,23 @@ Społecznościowy fork projektu [Piotra Machowskiego](https://github.com/PiotrMa
 
 ## Instalacja
 
+To fork spoza katalogu domyślnego, więc dodajesz go jako **własne repozytorium** (`elgatho/Home-Assistant-custom-components-Tauron-AMIplusplus`).
 
-### Przez [HACS](https://hacs.xyz/) (zalecane)
+### Marketplace (Home Assistant 2026.11+, zalecane)
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=elgatho&repository=Home-Assistant-custom-components-Tauron-AMIplusplus&category=integration)
+[![Otwórz repozytorium w Home Assistant.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=elgatho&repository=Home-Assistant-custom-components-Tauron-AMIplusplus&category=integration)
 
-* W sekcji _Integracje_ dodaj repozytorium „Tauron Amiplus+” (ten fork)
-* Zainstaluj dodane repozytorium
+1. _Ustawienia_ -> _Marketplace_ (przy pierwszym wejściu zaakceptuj ostrzeżenie o ryzyku i połącz konto GitHub kodem urządzenia; dostęp dotyczy tylko publicznych danych).
+2. _Dodaj z linku_ -> wpisz `elgatho/Home-Assistant-custom-components-Tauron-AMIplusplus` -> _Dodaj_.
+3. _Zainstaluj_. Po instalacji od razu otworzy się kreator konfiguracji, restart nie jest potrzebny. Aktualizacje wymagają restartu (Marketplace pokaże naprawę z przyciskiem restartu).
+
+Masz dotychczas HACS? Home Assistant 2026.11 migruje go automatycznie do Marketplace razem z dodanymi repozytoriami i encjami aktualizacji, więc nic nie trzeba robić.
+
+### [HACS](https://hacs.xyz/) (Home Assistant starszy niż 2026.11)
+
+1. W HACS otwórz menu z trzema kropkami -> _Własne repozytoria_ (_Custom repositories_).
+2. Wpisz `https://github.com/elgatho/Home-Assistant-custom-components-Tauron-AMIplusplus`, kategoria _Integracja_ (_Integration_) -> _Dodaj_.
+3. Znajdź „Tauron Amiplus+”, kliknij _Pobierz_ (_Download_) i zrestartuj Home Assistanta.
 
 ### Ręcznie
 
@@ -47,7 +57,7 @@ unzip tauron_amiplus.zip
 rm tauron_amiplus.zip
 ```
 
-Następnie zrestartuj Home Assistanta przed zastosowaniem zmian w pliku konfiguracyjnym.
+Następnie zrestartuj Home Assistanta i dodaj integrację w interfejsie (patrz „Konfiguracja”).
 
 > **⚠️ Breaking change.** Dodawanie integracji zaczyna się od wyboru: licznik eLicznik albo adres wyłączeń.
 > Osobna integracja `tauron_outage_notifier` zastąpiona tym wpisem. Dodaj adres ponownie, bo nie ma migracji,
