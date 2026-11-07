@@ -46,6 +46,7 @@
   trafia do logu INFO. Interwał przestał dryfować, a zapytania nocne nie obciążają konta.
 
 ### Dokumentacja
+- Dodano `custom_components/tauron_amiplus/brand/` (`icon.png`, `icon@2x.png`, tymczasowa ikona) wymagane przez HACS i Marketplace (HA 2026.3+).
 - Instalacja: Marketplace (HA 2026.11+, zastępuje HACS), HACS (starszy HA) jako własne repozytorium i ręcznie. Plakietka „HACS Default” zastąpiona, bo fork nie jest w katalogu domyślnym.
 - `hacs.json`: minimalna wersja HA podniesiona z 2022.12.0 do 2025.4.0 (`StatisticMeanType`, `type` z Pythona 3.12, `runtime_data`).
 - `manifest.json`: `codeowners` rozdzielone na poprawne loginy (`@PiotrMachowski`, `@elgatho`); wcześniej jeden wpis ze spacją nie przechodził walidacji.
