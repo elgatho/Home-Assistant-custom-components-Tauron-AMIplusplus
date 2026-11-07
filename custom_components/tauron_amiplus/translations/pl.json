@@ -42,15 +42,65 @@
           "username": "Nazwa użytkownika używana do logowania w eLiczniku",
           "password": "Hasło używane do logowania w eLiczniku"
         }
+      },
+      "user": {
+        "title": "Dodaj wpis integracji",
+        "description": "Wybierz, co chcesz dodać.",
+        "menu_options": {
+          "meter": "Licznik eLicznik (login i hasło)",
+          "outage": "Powiadomienia o wyłączeniach dla adresu (bez logowania)"
+        }
+      },
+      "outage": {
+        "title": "Adres wyłączeń",
+        "description": "Wpisz nazwę miejscowości (co najmniej 3 znaki).",
+        "data": {
+          "city_partial": "Nazwa miejscowości"
+        }
+      },
+      "outage_city": {
+        "title": "Adres wyłączeń",
+        "description": "Wybierz miejscowość.",
+        "data": {
+          "city": "Miejscowość"
+        }
+      },
+      "outage_street": {
+        "title": "Adres wyłączeń",
+        "description": "Wpisz nazwę ulicy (co najmniej 3 znaki).",
+        "data": {
+          "street_partial": "Nazwa ulicy"
+        }
+      },
+      "outage_street_selection": {
+        "title": "Adres wyłączeń",
+        "description": "Wybierz ulicę.",
+        "data": {
+          "street": "Ulica"
+        }
+      },
+      "outage_house_number": {
+        "title": "Adres wyłączeń",
+        "description": "Podaj numer domu i opcjonalnie urządzenie do powiadomień.",
+        "data": {
+          "house_no": "Numer domu",
+          "notify_device": "Urządzenie do powiadomień (opcjonalnie)"
+        }
       }
     },
     "error": {
       "server_no_connection": "Nie można połączyć się z serwerem TAURON eLicznik: {error_info}",
       "invalid_meter_id": "Nieprawidłowe ID punktu poboru",
-      "missing_configurable_start_date": "Nie skonfigurowano początku okresu dla sensorów konfigurowalnych"
+      "missing_configurable_start_date": "Nie skonfigurowano początku okresu dla sensorów konfigurowalnych",
+      "too_few_characters": "Wpisz co najmniej 3 znaki",
+      "no_cities_found": "Nie znaleziono miejscowości",
+      "no_streets_found": "Nie znaleziono ulicy",
+      "outage_cannot_connect": "Nie można połączyć się z serwisem wyłączeń",
+      "invalid_house_number": "Nieprawidłowy numer domu"
     },
     "abort": {
-      "reauth_successful": "Ponowne uwierzytelnienie zakończone powodzeniem"
+      "reauth_successful": "Ponowne uwierzytelnienie zakończone powodzeniem",
+      "already_configured": "Ten adres jest już skonfigurowany"
     }
   },
   "options": {
@@ -67,6 +117,14 @@
           "store_statistics": "Zapisywanie godzinowe statystyki (dla panelu Energia)",
           "settlement_factor": "Współczynnik rozliczenia magazynu wirtualnego (opust, np. 0.8)",
           "energy_storage_reset_date": "Data startu magazynu wirtualnego (saldo od 0 kWh, wcześniejsze dane są pomijane; puste = ostatnie 12 miesięcy)"
+        }
+      },
+      "init": {
+        "title": "Powiadomienia o wyłączeniach",
+        "description": "Ustaw, jak często sprawdzane są wyłączenia, i opcjonalnie urządzenie do powiadomień.",
+        "data": {
+          "scan_interval": "Interwał sprawdzania (minuty)",
+          "notify_device": "Urządzenie do powiadomień (opcjonalnie)"
         }
       }
     },
@@ -96,6 +154,55 @@
         "device_id": {
           "name": "Docelowe urządzenie",
           "description": "Urządzenie, dla którego zostanie wyczyszczone cache."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "Status wyłączenia",
+        "state": {
+          "none": "Brak wyłączenia",
+          "upcoming": "Zaplanowane",
+          "ongoing": "Trwa"
+        }
+      },
+      "next_outage": {
+        "name": "Następne wyłączenie"
+      },
+      "next_outage_end": {
+        "name": "Koniec następnego wyłączenia"
+      },
+      "next_outage_duration": {
+        "name": "Czas trwania następnego wyłączenia"
+      },
+      "next_outage_description": {
+        "name": "Opis następnego wyłączenia"
+      },
+      "outage_count": {
+        "name": "Wyłączenia w ciągu 30 dni"
+      }
+    },
+    "binary_sensor": {
+      "outage_active": {
+        "name": "Trwa wyłączenie"
+      }
+    },
+    "calendar": {
+      "outages": {
+        "name": "Wyłączenia"
+      }
+    },
+    "event": {
+      "new_outage": {
+        "name": "Nowe wyłączenie",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "new_outage": "Nowe wyłączenie"
+            }
+          }
         }
       }
     }

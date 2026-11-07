@@ -71,6 +71,27 @@ TYPE_AMOUNT_PAYMENT = "amount_payment"
 
 DEFAULT_UPDATE_INTERVAL = timedelta(hours=8, minutes=30)
 
+# Adres wyłączeń prądu (osobny wpis konfiguracji, bez logowania do eLicznika)
+CONF_KIND = "kind"
+KIND_OUTAGE = "outage"
+CONF_CITY_NAME = "city_name"
+CONF_CITY_GAID = "city_gaid"
+CONF_STREET_NAME = "street_name"
+CONF_STREET_GAID = "street_gaid"
+CONF_HOUSE_NO = "house_no"
+CONF_SCAN_INTERVAL = "scan_interval"
+CONF_NOTIFY_DEVICE = "notify_device"
+OUTAGE_LOOKAHEAD = timedelta(days=30)
+OUTAGE_DEFAULT_SCAN_INTERVAL = 60
+OUTAGE_MIN_SCAN_INTERVAL = 15
+OUTAGE_MAX_SCAN_INTERVAL = 1440
+OUTAGE_MIN_SEARCH_LENGTH = 3
+OUTAGE_PLATFORMS = [Platform.BINARY_SENSOR, Platform.CALENDAR, Platform.EVENT, Platform.SENSOR]
+OUTAGE_API_BASE_URL = "https://www.tauron-dystrybucja.pl"
+OUTAGE_ENDPOINT_CITIES = "/waapi/enum/geo/cities"
+OUTAGE_ENDPOINT_STREETS = "/waapi/enum/geo/streets"
+OUTAGE_ENDPOINT_OUTAGES = "/waapi/outages/address"
+
 SENSOR_TYPES_YAML = {
     TYPE_CONSUMPTION_READING: {
         "name": "Current consumption reading",

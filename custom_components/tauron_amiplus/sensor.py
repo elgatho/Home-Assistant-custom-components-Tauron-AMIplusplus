@@ -14,7 +14,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .connector import TauronAmiplusRawData
-from .const import (CONF_METER_ID, CONF_METER_NAME, CONF_SHOW_12_MONTHS, CONF_SHOW_BALANCED, CONF_SHOW_BALANCED_YEAR,
+from .const import (CONF_KIND, KIND_OUTAGE, CONF_METER_ID, CONF_METER_NAME, CONF_SHOW_12_MONTHS, CONF_SHOW_BALANCED, CONF_SHOW_BALANCED_YEAR,
                      CONF_ENERGY_STORAGE_RESET_DATE,
 
                     CONF_SHOW_CONFIGURABLE, CONF_SHOW_CONFIGURABLE_DATE, CONF_SHOW_GENERATION, CONF_TARIFF,
@@ -25,6 +25,7 @@ from .const import (CONF_METER_ID, CONF_METER_NAME, CONF_SHOW_12_MONTHS, CONF_SH
                     TYPE_AMOUNT, TYPE_AMOUNT_PAYMENT, TYPE_ENERGY_STORAGE)
 from .coordinator import TauronAmiplusUpdateCoordinator
 from .energy_storage import calculate_monthly_window
+from .outage_sensor import create_outage_sensors
 from .history_import import async_get_statistics_readings, statistic_id
 from .typing_helpers import TauronAmiplusConfigEntry
 
@@ -66,6 +67,10 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 
 async def async_setup_entry(hass, entry: TauronAmiplusConfigEntry, async_add_entities):
     """Set up a TAURON sensor based on a config entry."""
+    if entry.data.get(CONF_KIND) == KIND_OUTAGE:
+        async_add_entities(create_outage_sensors(entry.runtime_data))
+        return
+
     coordinator = entry.runtime_data.coordinator
     meter_id = entry.data[CONF_METER_ID]
     meter_name = entry.data[CONF_METER_NAME]

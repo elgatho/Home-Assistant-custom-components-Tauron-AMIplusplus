@@ -42,15 +42,65 @@
           "username": "Username used to login at eLicznik",
           "password": "Password used to login at eLicznik"
         }
+      },
+      "user": {
+        "title": "Add integration entry",
+        "description": "Choose what you want to add.",
+        "menu_options": {
+          "meter": "eLicznik energy meter (login and password)",
+          "outage": "Power outage notifications for an address (no login)"
+        }
+      },
+      "outage": {
+        "title": "Outage address",
+        "description": "Enter the city name (at least 3 characters).",
+        "data": {
+          "city_partial": "City name"
+        }
+      },
+      "outage_city": {
+        "title": "Outage address",
+        "description": "Select the city.",
+        "data": {
+          "city": "City"
+        }
+      },
+      "outage_street": {
+        "title": "Outage address",
+        "description": "Enter the street name (at least 3 characters).",
+        "data": {
+          "street_partial": "Street name"
+        }
+      },
+      "outage_street_selection": {
+        "title": "Outage address",
+        "description": "Select the street.",
+        "data": {
+          "street": "Street"
+        }
+      },
+      "outage_house_number": {
+        "title": "Outage address",
+        "description": "Enter the house number and optionally a device for notifications.",
+        "data": {
+          "house_no": "House number",
+          "notify_device": "Notification device (optional)"
+        }
       }
     },
     "error": {
       "server_no_connection": "Cannot connect to TAURON eLicznik server: {error_info}",
       "invalid_meter_id": "Invalid energy meter ID",
-      "missing_configurable_start_date": "Missing start date for configurable sensors"
+      "missing_configurable_start_date": "Missing start date for configurable sensors",
+      "too_few_characters": "Enter at least 3 characters",
+      "no_cities_found": "No city found",
+      "no_streets_found": "No street found",
+      "outage_cannot_connect": "Cannot connect to the outage service",
+      "invalid_house_number": "Invalid house number"
     },
     "abort": {
-      "reauth_successful": "Re-authentication was successful"
+      "reauth_successful": "Re-authentication was successful",
+      "already_configured": "This address is already configured"
     }
   },
   "options": {
@@ -68,6 +118,14 @@
           "store_statistics": "Store hourly statistics (for Energy dashboard)",
           "settlement_factor": "Settlement factor for virtual energy storage (net-metering, e.g. 0.8)",
           "energy_storage_reset_date": "Virtual energy storage start date (balance starts at 0 kWh; earlier data is ignored; leave empty for rolling 12 months)"
+        }
+      },
+      "init": {
+        "title": "Outage notifications",
+        "description": "Set how often the outages are checked and optionally a notification device.",
+        "data": {
+          "scan_interval": "Check interval (minutes)",
+          "notify_device": "Notification device (optional)"
         }
       }
     },
@@ -97,6 +155,55 @@
         "device_id": {
           "name": "Target device",
           "description": "The device which cache should be cleared."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "Outage status",
+        "state": {
+          "none": "No outage",
+          "upcoming": "Upcoming",
+          "ongoing": "Ongoing"
+        }
+      },
+      "next_outage": {
+        "name": "Next outage"
+      },
+      "next_outage_end": {
+        "name": "Next outage end"
+      },
+      "next_outage_duration": {
+        "name": "Next outage duration"
+      },
+      "next_outage_description": {
+        "name": "Next outage description"
+      },
+      "outage_count": {
+        "name": "Outages in next 30 days"
+      }
+    },
+    "binary_sensor": {
+      "outage_active": {
+        "name": "Outage active"
+      }
+    },
+    "calendar": {
+      "outages": {
+        "name": "Outages"
+      }
+    },
+    "event": {
+      "new_outage": {
+        "name": "New outage",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "new_outage": "New outage"
+            }
+          }
         }
       }
     }

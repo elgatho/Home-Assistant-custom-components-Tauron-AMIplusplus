@@ -20,6 +20,8 @@
 
 [Wersja polska](README.md)
 
+🔌 **New:** the same integration can now show planned power outages for your address, without logging in to eLicznik. See [Power outage notifications](#power-outage-notifications).
+
 Retrieves energy consumption and generation data from the unofficial [TAURON eLicznik](https://elicznik.tauron-dystrybucja.pl) API.
 
 A community fork of [Piotr Machowski's](https://github.com/PiotrMachowski) project – thanks for the original and for reverse-engineering the eLicznik API. The fork keeps the original authorship and license and is not affiliated with TAURON.
@@ -48,6 +50,21 @@ rm tauron_amiplus.zip
 ```
 
 Then restart Home Assistant before applying configuration file changes.
+
+> **⚠️ Breaking change.** Adding the integration now starts with a choice: eLicznik meter or outage address.
+> The standalone `tauron_outage_notifier` integration is replaced by this entry. Add the address again: there is no
+> migration, and entities get new `entity_id`s. The fixed 8h30 interval was replaced by a schedule (see "How it works").
+
+## Power outage notifications
+
+The same integration can track outages for any address in Poland, **without logging in** to eLicznik.
+Add it via _Add integration_ -> _Power outage notifications for an address_: city, street, house number.
+
+- Sensors: status, next outage (start, end, duration, description), number of outages in the next 30 days.
+- Binary sensor "Outage active", outage calendar and the `new_outage` event for new notices.
+- Optional notifications to a chosen `notify` device (in the entry options).
+
+Data comes from Tauron's public outage service. This is community support, not an official product.
 
 ## Configuration
 

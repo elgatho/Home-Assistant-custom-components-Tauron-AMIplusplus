@@ -2,9 +2,9 @@ from typing import Any
 
 from homeassistant.core import HomeAssistant
 
-from .const import (CONF_SHOW_12_MONTHS, CONF_SHOW_BALANCED, CONF_SHOW_BALANCED_YEAR,
-                    CONF_SHOW_CONFIGURABLE, CONF_SHOW_CONFIGURABLE_DATE, CONF_SHOW_GENERATION, CONF_STORE_STATISTICS,
-                    CONF_TARIFF)
+from .const import (CONF_KIND, CONF_NOTIFY_DEVICE, CONF_SCAN_INTERVAL, CONF_SHOW_12_MONTHS, CONF_SHOW_BALANCED,
+                    CONF_SHOW_BALANCED_YEAR, CONF_SHOW_CONFIGURABLE, CONF_SHOW_CONFIGURABLE_DATE, CONF_SHOW_GENERATION,
+                    CONF_STORE_STATISTICS, CONF_TARIFF, KIND_OUTAGE)
 from .typing_helpers import TauronAmiplusConfigEntry
 
 
@@ -13,6 +13,14 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: TauronA
 
 
 async def get_config_entry_diagnostics(hass: HomeAssistant, entry: TauronAmiplusConfigEntry) -> dict[str, Any]:
+    if entry.data.get(CONF_KIND) == KIND_OUTAGE:
+        return {
+            "kind": KIND_OUTAGE,
+            "scan_interval": entry.options.get(CONF_SCAN_INTERVAL),
+            "notify_device_configured": bool(entry.options.get(CONF_NOTIFY_DEVICE)),
+            "outages_announced": len(entry.runtime_data.data["outages"]),
+        }
+
     tariff = entry.data[CONF_TARIFF]
     show_generation_sensors = entry.options.get(CONF_SHOW_GENERATION, False)
     show_12_months = entry.options.get(CONF_SHOW_12_MONTHS, False)

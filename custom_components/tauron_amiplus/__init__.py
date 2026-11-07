@@ -11,11 +11,13 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util.dt import DATE_STR_FORMAT, parse_date
 
 from .const import (
+    CONF_KIND, KIND_OUTAGE, OUTAGE_PLATFORMS,
     CONF_METER_ID, CONF_METER_NAME, CONF_SHOW_12_MONTHS, CONF_SHOW_BALANCED, CONF_SHOW_BALANCED_YEAR,
     CONF_SHOW_CONFIGURABLE, CONF_SHOW_CONFIGURABLE_DATE, CONF_SHOW_GENERATION, CONF_STORE_STATISTICS, CONF_SETTLEMENT_FACTOR, CONF_ENERGY_STORAGE_RESET_DATE, CONF_TARIFF,
     DOMAIN, PLATFORMS,
 )
 from .coordinator import TauronAmiplusUpdateCoordinator
+from .outage_coordinator import TauronOutageCoordinator
 from .services import register_all_services
 from .typing_helpers import TauronAmiplusRuntimeData, TauronAmiplusConfigEntry
 
@@ -49,6 +51,9 @@ async def async_setup(hass, config):
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: TauronAmiplusConfigEntry) -> bool:
     """Set up TAURON as config entry."""
+    if config_entry.data.get(CONF_KIND) == KIND_OUTAGE:
+        return await _async_setup_outage_entry(hass, config_entry)
+
     if DOMAIN not in hass.data:
         hass.data[DOMAIN] = {}
 
@@ -99,9 +104,20 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: TauronAmiplusConf
     return True
 
 
+async def _async_setup_outage_entry(hass: HomeAssistant, config_entry) -> bool:
+    """Set up an outage address entry (public API, no login)."""
+    coordinator = TauronOutageCoordinator(hass, config_entry)
+    await coordinator.async_config_entry_first_refresh()
+    config_entry.runtime_data = coordinator
+    config_entry.async_on_unload(config_entry.add_update_listener(async_reload_entry))
+    await hass.config_entries.async_forward_entry_setups(config_entry, OUTAGE_PLATFORMS)
+    return True
+
+
 async def async_unload_entry(hass, config_entry) -> bool:
     """Unload a config entry."""
-    await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS)
+    platforms = OUTAGE_PLATFORMS if config_entry.data.get(CONF_KIND) == KIND_OUTAGE else PLATFORMS
+    await hass.config_entries.async_unload_platforms(config_entry, platforms)
     return True
 
 

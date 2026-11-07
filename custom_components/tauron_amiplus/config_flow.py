@@ -10,7 +10,10 @@ from homeassistant.core import callback
 from homeassistant.helpers.selector import selector
 
 from .connector import TauronAmiplusConnector
+from .outage_config_flow import TauronOutageConfigFlowMixin, TauronOutageOptionsFlowHandler
 from .const import (
+    CONF_KIND,
+    KIND_OUTAGE,
     CONF_METER_ID,
     CONF_METER_NAME,
     CONF_SHOW_12_MONTHS,
@@ -30,7 +33,7 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
-class TauronAmiplusFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
+class TauronAmiplusFlowHandler(TauronOutageConfigFlowMixin, config_entries.ConfigFlow, domain=DOMAIN):
     """TAURON config flow."""
 
     VERSION = 3
@@ -48,10 +51,12 @@ class TauronAmiplusFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_abort(reason="single_instance_allowed")
 
     async def async_step_user(self, user_input=None):
-        """Handle a flow initialized by the user."""
-        if user_input is not None:
-            return await self.async_step_init(user_input=None)
-        return self.async_show_form(step_id="confirm")
+        """Wybór: licznik eLicznik albo adres wyłączeń prądu."""
+        return self.async_show_menu(step_id="user", menu_options=["meter", "outage"])
+
+    async def async_step_meter(self, user_input=None):
+        """Licznik eLicznik: najpierw potwierdzenie, potem logowanie."""
+        return await self.async_step_confirm()
 
     async def async_step_confirm(self, user_input=None):
         """Handle a flow start."""
@@ -331,6 +336,8 @@ class TauronAmiplusFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(config_entry):
+        if config_entry.data.get(CONF_KIND) == KIND_OUTAGE:
+            return TauronOutageOptionsFlowHandler()
         return TauronAmiplusOptionsFlowHandler(config_entry)
 
 

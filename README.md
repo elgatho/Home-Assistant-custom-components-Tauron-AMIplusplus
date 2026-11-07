@@ -20,6 +20,8 @@
 
 [English version](README.en.md)
 
+🔌 **Nowość:** ta sama integracja pokaże zaplanowane wyłączenia prądu dla Twojego adresu, bez logowania do eLicznika. Zobacz [Powiadomienia o wyłączeniach](#powiadomienia-o-wyłączeniach-prądu).
+
 Integracja pobiera dane o zużyciu i produkcji energii z nieoficjalnego API [TAURON eLicznik](https://elicznik.tauron-dystrybucja.pl).
 
 Społecznościowy fork projektu [Piotra Machowskiego](https://github.com/PiotrMachowski) – dziękuję za oryginał i rozpracowanie API eLicznika. Fork zachowuje autorstwo i licencję oryginału, nie jest powiązany z TAURON.
@@ -46,6 +48,21 @@ rm tauron_amiplus.zip
 ```
 
 Następnie zrestartuj Home Assistanta przed zastosowaniem zmian w pliku konfiguracyjnym.
+
+> **⚠️ Breaking change.** Dodawanie integracji zaczyna się od wyboru: licznik eLicznik albo adres wyłączeń.
+> Osobna integracja `tauron_outage_notifier` zastąpiona tym wpisem. Dodaj adres ponownie, bo nie ma migracji,
+> a encje dostają nowe `entity_id`. Stały interwał 8h30 został zastąpiony harmonogramem (zob. „Jak to działa").
+
+## Powiadomienia o wyłączeniach prądu
+
+Ten sam wpis integracji może śledzić wyłączenia dla dowolnego adresu w Polsce, **bez logowania** do eLicznika.
+Dodaj go w _Dodaj integrację_ -> _Powiadomienia o wyłączeniach dla adresu_: miejscowość, ulica, numer domu.
+
+- Sensory: status, następne wyłączenie (początek, koniec, czas trwania, opis), liczba wyłączeń w 30 dni.
+- Binary sensor „Trwa wyłączenie", kalendarz wyłączeń i zdarzenie `new_outage` dla nowych komunikatów.
+- Powiadomienia na wybrane urządzenie `notify` (opcjonalnie, w opcjach wpisu).
+
+Dane pochodzą z publicznego serwisu wyłączeń Tauron. Jest to wsparcie społecznościowe, nie oficjalny produkt.
 
 ## Konfiguracja
 
