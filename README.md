@@ -86,6 +86,7 @@ _Ustawienia_ -> _Urządzenia i usługi_ -> _Dodaj integrację_ -> _Tauron Amiplu
 | Configurable sensors | Sumy od wybranej daty historycznej (więcej zapytań do API). |
 | Settlement factor | Współczynnik rozliczenia magazynu (`0`–`1`, domyślnie `0.8`). |
 | Energy storage reset date | Data startu magazynu (saldo od 0 kWh). Puste = ostatnie 12 miesięcy. |
+| Saldo konta (`show_account_balance`) | Sensor salda z Mój TAURON (tylko w opcjach integracji, domyślnie wyłączone). Wymaga dodatkowego logowania do moj.tauron.pl tymi samymi danymi co eLicznik. |
 
 Statystyki godzinowe są zawsze włączone (opcja _Store statistics_ jest pozostawiona dla zgodności). Konfiguracja przez YAML jest przestarzała – użyj interfejsu.
 
@@ -117,6 +118,7 @@ Energia w `kWh`; nazwa zawiera nazwę licznika. Sensory produkcji, bilansu, 12-m
 | `Domowy magazyn energii` | Szacowana energia dostępna w wirtualnym magazynie (net-metering): nadwyżki miesięczne × współczynnik rozliczenia, zużywane od najstarszych (FIFO), w oknie 12 miesięcy lub od daty resetu. Atrybuty: `uncovered_consumption`, `window`, `tariff`. |
 | `Monthly energy consumption zone <n>` | Zużycie w miesiącu w strefie `<n>` (tylko taryfy wielostrefowe; nazwa strefy w atrybucie `zone`). |
 | `Monthly off-peak consumption share` | Udział (%) zużycia w tańszej strefie w bieżącej taryfie (tylko wielostrefowe). |
+| `Account balance` | Saldo z Mój TAURON (PLN), suma po wszystkich punktach poboru; wartość dodatnia = do zapłaty. Atrybut `supply_points`: nazwa, adres, PPE, saldo, przeterminowane, bieżące, odsetki. Tylko po włączeniu opcji _Saldo konta_. |
 
 ### Panel Energia
 

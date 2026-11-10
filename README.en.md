@@ -86,6 +86,7 @@ _Settings_ -> _Devices & services_ -> _Add integration_ -> _Tauron Amiplus+_ (or
 | Configurable sensors | Totals from a chosen historical date (more API requests). |
 | Settlement factor | Energy storage settlement factor (`0`–`1`, default `0.8`). |
 | Energy storage reset date | Storage start date (balance starts at 0 kWh). Empty = last 12 months. |
+| Account balance (`show_account_balance`) | Account balance sensor from Mój TAURON (integration options only, off by default). Requires an extra login to moj.tauron.pl with the same credentials as eLicznik. |
 
 Hourly statistics are always on (the _Store statistics_ option is kept for compatibility). YAML configuration is deprecated – use the UI.
 
@@ -117,6 +118,7 @@ Energy is in `kWh`; names include the meter name. Generation, balance, 12-month 
 | `Domowy magazyn energii` | Estimated energy available in the virtual storage (net-metering): monthly surpluses × settlement factor, consumed oldest first (FIFO), within a 12-month window or from the reset date. Attributes: `uncovered_consumption`, `window`, `tariff`. |
 | `Monthly energy consumption zone <n>` | Monthly consumption in zone `<n>` (multi-zone tariffs only; zone name in the `zone` attribute). |
 | `Monthly off-peak consumption share` | Share (%) of consumption in the cheaper zone of the current tariff (multi-zone only). |
+| `Account balance` | Balance from Mój TAURON (PLN), summed over all supply points; positive = amount due. Attribute `supply_points`: name, address, PPE, balance, overdue, current, interest. Only with the _Account balance_ option enabled. |
 
 ### Energy dashboard
 
