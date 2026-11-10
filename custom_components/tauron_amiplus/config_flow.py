@@ -17,6 +17,7 @@ from .const import (
     CONF_METER_ID,
     CONF_METER_NAME,
     CONF_SHOW_12_MONTHS,
+    CONF_SHOW_ACCOUNT_BALANCE,
     CONF_SHOW_BALANCED,
     CONF_SHOW_BALANCED_YEAR,
     CONF_SHOW_CONFIGURABLE,
@@ -410,6 +411,10 @@ class TauronAmiplusOptionsFlowHandler(config_entries.OptionsFlow):
                          CONF_ENERGY_STORAGE_RESET_DATE,
                          default=self.get_option(CONF_ENERGY_STORAGE_RESET_DATE, vol.UNDEFINED),
                      ): selector({"date": {}}),
+                     vol.Required(
+                         CONF_SHOW_ACCOUNT_BALANCE,
+                         default=self.get_option(CONF_SHOW_ACCOUNT_BALANCE, False),
+                     ): bool,
 
                  }
 

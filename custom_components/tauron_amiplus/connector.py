@@ -14,6 +14,7 @@ from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.storage import Store
 from homeassistant.util import slugify
 
+from .account_balance import AccountBalance, extract_view_model, flatten_view_model, parse_account_balance
 from .hourly_data import MEASUREMENT_TYPES, expected_hours_for_day, normalize_daily_data, parse_daily_endpoint
 from .const import (
     CONST_DATE_FORMAT,
@@ -26,6 +27,8 @@ from .const import (
     CONST_URL_READINGS,
     CONST_URL_SELECT_METER,
     CONST_URL_SERVICE,
+    CONST_URL_INVOICES,
+    CONST_URL_INVOICES_LOAD,
     CONST_URL_SERVICE_MOJ_TAURON,
     STORAGE_VERSION,
     STORAGE_KEY_PREFIX,
@@ -40,6 +43,7 @@ class TauronAmiplusRawData:
         self.consumption: Optional[TauronAmiplusDataSet] = None
         self.generation: Optional[TauronAmiplusDataSet] = None
         self.payments: Optional[list[MojTauronPaymentData]] = None
+        self.account_balance: Optional[AccountBalance] = None
         self.hourly_series = {}
         self.hourly_diagnostics = {}
         self.balanced = None
@@ -116,6 +120,7 @@ class TauronAmiplusConnector:
         show_balanced_yearly: bool = False,
         show_configurable: bool = False,
         show_configurable_date: datetime.date = None,
+        show_account_balance: bool = False,
     ):
         self._username = username
         self._password = password
@@ -128,6 +133,8 @@ class TauronAmiplusConnector:
         self._show_balanced_yearly = show_balanced_yearly
         self._show_configurable = show_configurable
         self._show_configurable_date = show_configurable_date
+        self._show_account_balance = show_account_balance
+        self._last_account_balance: AccountBalance | None = None
         self._session: ClientSession | None = None
         self._cache = DailyDataCache(meter_id)
         self._cycle_cache: dict[tuple, Any] = {}
@@ -164,6 +171,8 @@ class TauronAmiplusConnector:
         data.generation = TauronAmiplusDataSet()
         if self._show_generation or self._show_balanced:
             data.generation.json_reading = await self.get_reading(True)
+        if self._show_account_balance:
+            data.account_balance = await self.get_account_balance()
         self._cache.delete_older_than(datetime.datetime.now() - datetime.timedelta(days=8))
         return data
 
@@ -622,6 +631,28 @@ class TauronAmiplusConnector:
         except Exception as err:
             _LOGGER.error("Error during downloading. %s", err)
             return []
+
+    async def get_account_balance(self) -> AccountBalance | None:
+        """Saldo from Mój TAURON. Never raises: a failure must not break the energy readings (the last known value is kept)."""
+        try:
+            session, _ = await self.login_service(CONST_URL_LOGIN_MOJ_TAURON, CONST_URL_SERVICE_MOJ_TAURON)
+            page = await session.get(CONST_URL_INVOICES, headers=CONST_REQUEST_HEADERS)
+            form = {"startingIndex": "0", "searchTerm": "", "PickupMediumType": ""}
+            form.update(flatten_view_model(extract_view_model(await page.text())))
+            response = await session.post(
+                CONST_URL_INVOICES_LOAD,
+                data=form,
+                headers={**CONST_REQUEST_HEADERS, "X-Requested-With": "XMLHttpRequest", "Referer": CONST_URL_INVOICES},
+            )
+            response.raise_for_status()
+            balance = parse_account_balance((await response.json(content_type=None))["ResultHtml"])
+            if not balance.points:
+                raise ValueError("no supply points with balance in the response")
+            self._last_account_balance = balance
+            self.log(f"ACCOUNT BALANCE: {balance}")
+        except Exception as err:
+            _LOGGER.warning("[%s]: Failed to download account balance: %s", self._meter_id, err)
+        return self._last_account_balance
 
     @staticmethod
     def format_date(date):

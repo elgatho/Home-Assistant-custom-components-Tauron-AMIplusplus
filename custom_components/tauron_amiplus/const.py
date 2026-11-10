@@ -18,6 +18,7 @@ CONF_SHOW_BALANCED_YEAR = "show_balanced_year_sensors"
 CONF_SHOW_12_MONTHS = "show_12_months_sensors"
 CONF_SHOW_CONFIGURABLE = "show_configurable_sensors"
 CONF_SHOW_CONFIGURABLE_DATE = "show_configurable_sensors_date"
+CONF_SHOW_ACCOUNT_BALANCE = "show_account_balance"
 CONF_STORE_STATISTICS = "store_statistics"
 CONF_SETTLEMENT_FACTOR = "settlement_factor"
 CONF_ENERGY_STORAGE_RESET_DATE = "energy_storage_reset_date"
@@ -28,6 +29,8 @@ CONST_URL_LOGIN = "https://logowanie.tauron-dystrybucja.pl/login"
 CONST_URL_SERVICE = "https://elicznik.tauron-dystrybucja.pl"
 CONST_URL_LOGIN_MOJ_TAURON = "https://logowanie.tauron.pl/login"
 CONST_URL_SERVICE_MOJ_TAURON = "https://moj.tauron.pl"
+CONST_URL_INVOICES = "https://moj.tauron.pl/en/Home/Pages/faktury"
+CONST_URL_INVOICES_LOAD = "https://moj.tauron.pl/api/sitecore/EbokInvoiceList/LoadMoreInvoicesProducts"
 CONST_URL_SELECT_METER = f"{CONST_URL_SERVICE}/ustaw_punkt"
 CONST_URL_ENERGY = f"{CONST_URL_SERVICE}/energia/api"
 CONST_URL_READINGS = f"{CONST_URL_SERVICE}/odczyty/api"
@@ -192,4 +195,4 @@ SENSOR_TYPES = {
     #     "name": "Account balance",
     #     "state_class": SensorStateClass.MEASUREMENT,
     # },
-}
+}

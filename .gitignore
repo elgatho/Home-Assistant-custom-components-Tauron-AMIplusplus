@@ -11,3 +11,4 @@ venv/
 /scripts
 /tests
 pytest.ini
+/debug

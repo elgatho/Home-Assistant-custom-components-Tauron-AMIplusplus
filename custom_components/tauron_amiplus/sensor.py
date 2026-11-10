@@ -14,7 +14,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .connector import TauronAmiplusRawData
-from .const import (CONF_KIND, KIND_OUTAGE, CONF_METER_ID, CONF_METER_NAME, CONF_SHOW_12_MONTHS, CONF_SHOW_BALANCED, CONF_SHOW_BALANCED_YEAR,
+from .const import (CONF_KIND, KIND_OUTAGE, CONF_METER_ID, CONF_METER_NAME, CONF_SHOW_12_MONTHS, CONF_SHOW_ACCOUNT_BALANCE, CONF_SHOW_BALANCED, CONF_SHOW_BALANCED_YEAR,
                      CONF_ENERGY_STORAGE_RESET_DATE,
 
                     CONF_SHOW_CONFIGURABLE, CONF_SHOW_CONFIGURABLE_DATE, CONF_SHOW_GENERATION, CONF_TARIFF,
@@ -86,6 +86,8 @@ async def async_setup_entry(hass, entry: TauronAmiplusConfigEntry, async_add_ent
         show_configurable = False
 
     sensors = []
+    if entry.options.get(CONF_SHOW_ACCOUNT_BALANCE, False):
+        sensors.append(TauronAmiplusAccountBalanceSensor(coordinator, meter_id, meter_name))
     sensor_types = {**SENSOR_TYPES}
     if not show_generation_sensors:
         sensor_types = {k: v for k, v in sensor_types.items() if not k.startswith(CONST_GENERATION)}
@@ -156,6 +158,42 @@ async def async_setup_entry(hass, entry: TauronAmiplusConfigEntry, async_add_ent
 
 
 OFF_PEAK_SHARE_KEY = "off_peak_share"
+
+
+class TauronAmiplusAccountBalanceSensor(SensorEntity, CoordinatorEntity):
+    """Account balance (saldo) from Mój TAURON: positive = amount to pay, summed over all supply points."""
+
+    def __init__(self, coordinator: TauronAmiplusUpdateCoordinator, meter_id: str, meter_name: str):
+        super().__init__(coordinator)
+        self._meter_id = meter_id
+        self._attr_unique_id = f"tauron-{meter_id}-account_balance"
+        self._attr_name = f"{DEFAULT_NAME} {meter_name} account balance"
+        self._attr_device_class = SensorDeviceClass.MONETARY
+        self._attr_native_unit_of_measurement = "PLN"
+        self._attr_suggested_display_precision = 2
+        self._attr_icon = "mdi:cash"
+
+    @property
+    def device_info(self):
+        return {"identifiers": {(DOMAIN, self._meter_id)}}
+
+    @property
+    def _balance(self):
+        return getattr(self.coordinator.data, "account_balance", None)
+
+    @property
+    def available(self):
+        return super().available and self._balance is not None
+
+    @property
+    def native_value(self):
+        return self._balance.total if self._balance else None
+
+    @property
+    def extra_state_attributes(self):
+        if not self._balance:
+            return {}
+        return {"supply_points": [dataclasses.asdict(p) for p in self._balance.points]}
 
 
 def current_tariff_zones(data) -> dict[str, tuple[str, float]]:
@@ -445,7 +483,7 @@ class TauronAmiplusSensor(SensorEntity, CoordinatorEntity):
         dataset = data.generation if self._generation else data.consumption
         self._tariff = data.tariff
 
-        if self._sensor_type == TYPE_AMOUNT_PAYMENT and len(data.payments)>0:
+        if self._sensor_type == TYPE_AMOUNT_PAYMENT and data.payments:
             self._state = data.payments[0].value
             payments = list(map(lambda p: dataclasses.asdict(p), data.payments))
             self._params = {"date": data.payments[0].date, "payments": payments}

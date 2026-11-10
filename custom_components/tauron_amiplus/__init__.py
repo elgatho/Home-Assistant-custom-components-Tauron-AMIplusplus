@@ -12,7 +12,7 @@ from homeassistant.util.dt import DATE_STR_FORMAT, parse_date
 
 from .const import (
     CONF_KIND, KIND_OUTAGE, OUTAGE_PLATFORMS,
-    CONF_METER_ID, CONF_METER_NAME, CONF_SHOW_12_MONTHS, CONF_SHOW_BALANCED, CONF_SHOW_BALANCED_YEAR,
+    CONF_METER_ID, CONF_METER_NAME, CONF_SHOW_12_MONTHS, CONF_SHOW_ACCOUNT_BALANCE, CONF_SHOW_BALANCED, CONF_SHOW_BALANCED_YEAR,
     CONF_SHOW_CONFIGURABLE, CONF_SHOW_CONFIGURABLE_DATE, CONF_SHOW_GENERATION, CONF_STORE_STATISTICS, CONF_SETTLEMENT_FACTOR, CONF_ENERGY_STORAGE_RESET_DATE, CONF_TARIFF,
     DOMAIN, PLATFORMS,
 )
@@ -70,6 +70,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: TauronAmiplusConf
     show_configurable = config_entry.options.get(CONF_SHOW_CONFIGURABLE, False)
     show_configurable_date = config_entry.options.get(CONF_SHOW_CONFIGURABLE_DATE, None)
     store_statistics = config_entry.options.get(CONF_STORE_STATISTICS, False)
+    show_account_balance = config_entry.options.get(CONF_SHOW_ACCOUNT_BALANCE, False)
     settlement_factor = config_entry.options.get(CONF_SETTLEMENT_FACTOR, 0.8)
     energy_storage_reset_date = config_entry.options.get(CONF_ENERGY_STORAGE_RESET_DATE)
     if energy_storage_reset_date:
@@ -95,6 +96,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: TauronAmiplusConf
         store_statistics=store_statistics,
         settlement_factor=settlement_factor,
         energy_storage_reset_date=energy_storage_reset_date,
+        show_account_balance=show_account_balance,
     )
     config_entry.runtime_data = TauronAmiplusRuntimeData(tauron_amiplus_update_coordinator)
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)

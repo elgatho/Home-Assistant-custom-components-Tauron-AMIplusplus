@@ -117,7 +117,8 @@
           "show_configurable_sensors_date": "Start date for configurable data period",
           "store_statistics": "Store hourly statistics (for Energy dashboard)",
           "settlement_factor": "Settlement factor for virtual energy storage (net-metering, e.g. 0.8)",
-          "energy_storage_reset_date": "Virtual energy storage start date (balance starts at 0 kWh; earlier data is ignored; leave empty for rolling 12 months)"
+          "energy_storage_reset_date": "Virtual energy storage start date (balance starts at 0 kWh; earlier data is ignored; leave empty for rolling 12 months)",
+          "show_account_balance": "Enable account balance sensor (additional login to Mój TAURON)"
         }
       },
       "init": {

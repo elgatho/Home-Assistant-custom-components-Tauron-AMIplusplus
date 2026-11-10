@@ -116,7 +116,8 @@
           "show_configurable_sensors_date": "Początek okresu dla konfigurowalnych podsumowań",
           "store_statistics": "Zapisywanie godzinowe statystyki (dla panelu Energia)",
           "settlement_factor": "Współczynnik rozliczenia magazynu wirtualnego (opust, np. 0.8)",
-          "energy_storage_reset_date": "Data startu magazynu wirtualnego (saldo od 0 kWh, wcześniejsze dane są pomijane; puste = ostatnie 12 miesięcy)"
+          "energy_storage_reset_date": "Data startu magazynu wirtualnego (saldo od 0 kWh, wcześniejsze dane są pomijane; puste = ostatnie 12 miesięcy)",
+          "show_account_balance": "Saldo konta z Mój TAURON (dodatkowe logowanie do serwisu)"
         }
       },
       "init": {
