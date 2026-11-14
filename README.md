@@ -26,6 +26,18 @@ Integracja pobiera dane o zużyciu i produkcji energii z nieoficjalnego API [TAU
 
 Społecznościowy fork projektu [Piotra Machowskiego](https://github.com/PiotrMachowski) – dziękuję za oryginał i rozpracowanie API eLicznika. Fork zachowuje autorstwo i licencję oryginału, nie jest powiązany z TAURON.
 
+## Co daje ta wersja (w porównaniu z oryginalnym forkiem)
+
+Najważniejsze funkcje:
+
+- **Szybkie ładowanie.** Wszystkie dane są zapisywane w bazie danych Home Assistanta. Nie trzeba czekać, aż integracja za każdym razem pobierze całą historię.
+- **Magazyn energii liczony automatycznie.** Nie musisz tworzyć własnych wzorów i pomocników, żeby wiedzieć, ile energii zostało w magazynie prosumenta.
+- **Faktury i saldo.** Integracja pokazuje, ile masz do zapłaty na Mój TAURON, z podziałem na przeterminowane i bieżące kwoty dla każdego punktu poboru.
+- **Planowane wyłączenia prądu.** Informacje o zaplanowanych wyłączeniach dla Twojego adresu, z powiadomieniami. Nie wymaga logowania.
+- **Automatyczna obsługa taryf.** Integracja sama rozpoznaje Twoją taryfę (np. G11, G12, G12W) i dostosowuje sensory, w tym strefy czasowe.
+- **Poprawki błędów.** Naprawiamy problemy z brakującymi danymi i wykrywamy dane, które się nie zgadzają, żeby statystyki były wiarygodne.
+- **Wiele mniejszych usprawnień.** Lepsze komunikaty przy konfiguracji, czytelniejsze nazwy sensorów i diagnostyka, która pomaga znaleźć przyczynę problemu.
+
 ## Instalacja
 
 To fork spoza katalogu domyślnego, więc dodajesz go jako **własne repozytorium** (`elgatho/Home-Assistant-custom-components-Tauron-AMIplusplus`).
